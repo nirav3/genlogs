@@ -1,0 +1,28 @@
+{
+  "routes": [
+    {
+      "origin": "New York City, NY",
+      "destination": "Washington, DC",
+      "carriers": [
+        { "id": "knight-swift", "name": "Knight-Swift Transport Services", "trucksPerDay": 10 },
+        { "id": "jb-hunt", "name": "J.B. Hunt Transport Services Inc", "trucksPerDay": 7 },
+        { "id": "yrc-worldwide", "name": "YRC Worldwide", "trucksPerDay": 5 }
+      ]
+    },
+    {
+      "origin": "San Francisco, CA",
+      "destination": "Los Angeles, CA",
+      "carriers": [
+        { "id": "xpo-logistics", "name": "XPO Logistics", "trucksPerDay": 9 },
+        { "id": "schneider", "name": "Schneider", "trucksPerDay": 6 },
+        { "id": "landstar-systems", "name": "Landstar Systems", "trucksPerDay": 2 }
+      ]
+    }
+  ],
+  "default": {
+    "carriers": [
+      { "id": "ups", "name": "UPS Inc.", "trucksPerDay": 11 },
+      { "id": "fedex", "name": "FedEx Corp", "trucksPerDay": 9 }
+    ]
+  }
+}
