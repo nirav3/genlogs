@@ -14,24 +14,19 @@ line (see "Upgrading" at the bottom).
 
 ---
 
-## Known compatibility note — read before first deploy
+## Fixed compatibility note — HTTPS redirect loop behind Render's proxy
 
 Render's edge terminates TLS and forwards **plain HTTP** to the container over Render's internal
-network. `Program.cs` currently calls `app.UseHttpsRedirection()` unconditionally, with no
-`ForwardedHeaders` middleware configured. Kestrel will see every request as HTTP and redirect to
-HTTPS; the browser repeats the same HTTPS request, which arrives at the container as HTTP again —
-an infinite redirect loop that breaks every API call.
+network. `Program.cs` calls `app.UseHttpsRedirection()`, which without translating that hop would
+have seen every request as HTTP and redirect-looped.
 
-This is an application-code fix (out of scope for this deployment pass — hand to the
-backend-developer agent), one of:
-
-- Skip `UseHttpsRedirection()` in `Production` (Render already enforces HTTPS at its edge for every
-  `*.onrender.com` and custom domain, so the app doesn't need to redirect a request it never actually
-  receives over plain HTTP from a real client), **or**
-- Add `app.UseForwardedHeaders(new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedProto })`
-  before `UseHttpsRedirection()` so Kestrel trusts Render's `X-Forwarded-Proto` header.
-
-Confirm this is fixed (or fix it) before deploying, or `genlogs-api` will be unreachable.
+**Fixed** (commit `3e977fa`): `app.UseForwardedHeaders(...)` is registered as the very first
+middleware in the pipeline (before exception handling, security headers, `UseHttpsRedirection`, CORS,
+auth, and rate limiting), configured for `XForwardedFor | XForwardedProto` with `KnownNetworks`/
+`KnownProxies` cleared (Render's edge isn't a fixed known proxy, and it's the only thing that can
+reach the container). A regression test (`ForwardedHeadersTests` in `SecurityHardeningTests.cs`)
+confirms a request with `X-Forwarded-Proto: https` gets `200 OK`, not a redirect. Nothing left to do
+here before deploying.
 
 ---
 
@@ -102,6 +97,14 @@ Push to `main` (or merge a passing PR) and watch both services deploy in the Ren
   needed to serve it. The one build step is generating `frontend/src/config.js` (gitignored, normally
   hand-written locally per `frontend/src/config.example.js`) from the three env vars above, via the
   `buildCommand` in `render.yaml`.
+
+## Regions
+
+`genlogs-api` is pinned to `virginia` (US East) — closer to East Coast users for lower API latency;
+it has no effect on Google Maps latency, since the Maps JS API is loaded and called entirely
+client-side in the browser, never by this backend. `genlogs-frontend` has no `region` set —
+Render's Blueprint spec confirms `region` doesn't apply to static sites, which are always served
+globally over Render's CDN regardless of build region.
 
 ## SQLite persistence decision
 
