@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Genlogs portal</title>
+<link rel="stylesheet" href="src/styles.css" />
+</head>
+<body>
+<header>
+  <h1>Genlogs portal</h1>
+  <p>Find the fastest routes and top carriers for a lane.</p>
+</header>
+
+<div data-role="setup-error" role="alert" hidden></div>
+
+<main>
+  <section aria-labelledby="signin-heading">
+    <h2 id="signin-heading">Sign in</h2>
+    <p>Sign in with Google to search for carriers on a lane.</p>
+    <div data-role="signin-container"></div>
+    <p data-role="auth-status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section aria-labelledby="search-heading">
+    <h2 id="search-heading">Search a lane</h2>
+
+    <div>
+      <label for="origin-container">Origin city</label>
+      <div id="origin-container" data-role="origin-container"></div>
+    </div>
+
+    <div>
+      <label for="destination-container">Destination city</label>
+      <div id="destination-container" data-role="destination-container"></div>
+    </div>
+
+    <button type="button" data-role="search-button" disabled>Search</button>
+
+    <p data-role="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section aria-labelledby="map-heading">
+    <h2 id="map-heading">Fastest routes</h2>
+    <p class="section-note">Times reflect current traffic conditions; the map shows live traffic below.</p>
+    <div data-role="map" role="application" aria-label="Map showing up to three fastest routes with live traffic"></div>
+    <ol data-role="route-summary" class="route-summary" aria-label="Route options, duration and distance"></ol>
+    <p data-role="route-status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section aria-labelledby="carriers-heading">
+    <h2 id="carriers-heading">Carriers on this lane</h2>
+    <div data-role="carrier-list" aria-live="polite"></div>
+  </section>
+</main>
+
+<!-- defer only (no async): deferred scripts and the type="module" entry point below
+     both execute in document order, right before DOMContentLoaded fires, so
+     window.google.accounts.id is guaranteed to exist before app.js's init() runs
+     on DOMContentLoaded. With `async` added back, this script could execute
+     after DOMContentLoaded and break auth.initAuth() (and everything after it
+     in init(), since that call isn't wrapped in a try/catch). -->
+<script src="https://accounts.google.com/gsi/client" defer></script>
+<script src="src/app.js" type="module"></script>
+</body>
+</html>
