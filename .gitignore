@@ -11,3 +11,10 @@ obj/
 
 #ignore secrets
 docs/secrets
+
+# Frontend local config (real API keys/client IDs) — never commit
+frontend/src/config.js
+
+# Frontend deps/coverage
+frontend/node_modules/
+frontend/coverage/

@@ -1,0 +1,260 @@
+:root {
+  color-scheme: light dark;
+  --color-bg: #f5f6f8;
+  --color-surface: #ffffff;
+  --color-text: #1c1f24;
+  --color-muted: #5b6472;
+  --color-border: #d8dce2;
+  --color-accent: #1a56db;
+  --color-accent-contrast: #ffffff;
+  --color-danger: #b3261e;
+  --color-danger-bg: #fdecea;
+  --color-warning: #8a5a00;
+  --color-warning-bg: #fff4e0;
+  --color-success-bg: #eaf6ec;
+  --radius: 10px;
+  --spacing: 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #14161a;
+    --color-surface: #1d2026;
+    --color-text: #e7e9ec;
+    --color-muted: #9aa3b0;
+    --color-border: #2c3038;
+    --color-danger-bg: #3a1f1d;
+    --color-warning-bg: #3a2f14;
+    --color-success-bg: #16311d;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+header {
+  padding: 1.5rem var(--spacing) 1rem;
+  text-align: center;
+}
+
+header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+}
+
+header p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+main {
+  display: grid;
+  gap: var(--spacing);
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 var(--spacing) 3rem;
+}
+
+main > section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--spacing);
+}
+
+main > section h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.section-note {
+  margin: 0 0 0.75rem;
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+[data-role="setup-error"] {
+  margin: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+
+[data-role="setup-error"][hidden] {
+  display: none;
+}
+
+[data-role="signin-container"] {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem;
+}
+
+[data-role="origin-container"],
+[data-role="destination-container"] {
+  width: 100%;
+  margin-bottom: var(--spacing);
+}
+
+/* Google's PlaceAutocompleteElement is a custom element; style the host so it
+   fills the same width as the rest of the form instead of shrinking to its
+   intrinsic (narrow) default. */
+[data-role="origin-container"] gmp-place-autocomplete,
+[data-role="destination-container"] gmp-place-autocomplete {
+  width: 100%;
+}
+
+[data-role="search-button"] {
+  appearance: none;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.65rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  cursor: pointer;
+}
+
+[data-role="search-button"]:disabled {
+  background: var(--color-border);
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+[data-role="search-button"]:not(:disabled):hover {
+  filter: brightness(1.08);
+}
+
+[data-role="status"],
+[data-role="route-status"] {
+  margin: 0.75rem 0 0;
+  min-height: 1.25rem;
+  font-size: 0.9rem;
+}
+
+[data-role="status"][data-state="loading"] {
+  color: var(--color-muted);
+}
+
+[data-role="status"][data-state="auth"],
+[data-role="status"][data-state="validation"] {
+  color: var(--color-danger);
+}
+
+[data-role="status"][data-state="rate_limited"] {
+  color: var(--color-warning);
+}
+
+[data-role="status"][data-state="server"] {
+  color: var(--color-danger);
+}
+
+/* The map container needs an explicit, non-zero size: the Maps JS API renders
+   into whatever pixel dimensions the element already has, so without this a
+   plain <div> collapses to zero height and the map never becomes visible. */
+[data-role="map"] {
+  width: 100%;
+  height: 360px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+
+.route-summary {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.route-summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.route-summary-item:hover {
+  border-color: var(--color-accent);
+}
+
+.route-summary-item:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.route-summary-item.is-selected {
+  border-color: var(--color-accent);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+.route-summary-label {
+  font-weight: 600;
+  flex: 1;
+}
+
+.route-summary-duration,
+.route-summary-distance {
+  color: var(--color-muted);
+}
+
+.carrier-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.carrier-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+
+.carrier-name {
+  font-weight: 600;
+}
+
+.carrier-trucks-per-day {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.carrier-list-empty {
+  margin: 0;
+  color: var(--color-muted);
+  font-style: italic;
+}
