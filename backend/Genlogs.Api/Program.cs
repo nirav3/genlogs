@@ -6,6 +6,7 @@ using Genlogs.Api.Middleware;
 using Genlogs.Api.Services;
 using Genlogs.Api.Startup;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -92,6 +93,24 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
     DbInitializer.Seed(db);
 }
+
+// Render terminates TLS at its edge and forwards plain HTTP to this container over an internal
+// hop, identifying the original scheme via X-Forwarded-Proto. Must run before UseExceptionHandler
+// and everything downstream (security headers, HTTPS redirection, CORS, auth, rate limiting) so
+// they all see the real scheme/client IP instead of the internal http hop — otherwise
+// UseHttpsRedirection() below sees "http" on every request and redirect-loops against a client
+// that already connected over https. KnownNetworks/KnownProxies are cleared (not left at their
+// loopback-only default) because Render's proxy isn't a fixed, known on-prem address like a
+// traditional reverse proxy; this is standard guidance for PaaS platforms (Render/Heroku/Azure App
+// Service) in front of ASP.NET Core, and is safe here because Render's edge is the only thing that
+// can reach this container — it isn't exposed to arbitrary untrusted proxies.
+var forwardedHeaderOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+};
+forwardedHeaderOptions.KnownNetworks.Clear();
+forwardedHeaderOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeaderOptions);
 
 app.UseExceptionHandler();
 

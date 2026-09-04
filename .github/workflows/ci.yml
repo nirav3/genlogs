@@ -1,0 +1,52 @@
+name: CI
+
+# Test gate for Render's auto-deploy: both render.yaml services use
+# `autoDeployTrigger: checksPass`, so Render only deploys a push to main once every GitHub check
+# here (this workflow) reports success. Also runs on PRs so a red run is visible before merge.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    name: Backend (dotnet test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - run: dotnet restore Genlogs.sln
+      - run: dotnet build Genlogs.sln --configuration Release --no-restore
+      - run: dotnet test Genlogs.sln --configuration Release --no-build --verbosity normal
+
+  frontend-tests:
+    name: Frontend (jest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      # frontend/src/config.js is gitignored (real Google client ID / Maps key are local-only) but
+      # apiClient.test.js imports it directly — the example file's placeholder values are enough for
+      # tests, which never make real network calls to Google APIs.
+      - run: cp src/config.example.js src/config.js
+
+      - run: npm ci
+      - run: npm test
