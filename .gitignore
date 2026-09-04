@@ -1,0 +1,13 @@
+bin/
+obj/
+
+# SQLite database is created and seeded fresh on every startup (design.md) — never committed.
+*.db
+*.db-shm
+*.db-wal
+
+.vs/
+*.user
+
+#ignore secrets
+docs/secrets

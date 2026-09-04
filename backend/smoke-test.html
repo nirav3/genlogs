@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<!--
+  Manual smoke-test harness for the carrier-lookup-api backend — NOT part of the shipped frontend.
+  Signs in with Google for real (so we get a genuine Google-signed ID token, which can't be faked now
+  that the session-exchange endpoint is gone), then calls the running API directly from the browser.
+  Covers tasks.md 6.2: all 3 lookup cases + the missing/invalid-token reject paths.
+
+  Must be served over http(s), not opened as a file:// URL — Google Identity Services requires a real
+  origin that matches an "Authorized JavaScript origin" on the OAuth client.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Genlogs API smoke test</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+  fieldset { margin-bottom: 1.5rem; }
+  label { display: block; margin-top: 0.5rem; font-size: 0.9rem; }
+  input { width: 100%; padding: 0.4rem; box-sizing: border-box; }
+  button { margin: 0.5rem 0.5rem 0.5rem 0; padding: 0.5rem 0.9rem; cursor: pointer; }
+  #log { background: #111; color: #0f0; padding: 1rem; height: 320px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; }
+  .status-ok { color: #7f7; }
+  .status-fail { color: #f77; }
+</style>
+</head>
+<body>
+<h1>Genlogs API smoke test</h1>
+
+<fieldset>
+  <legend>Config</legend>
+  <label>Google OAuth Client ID
+    <input id="clientId" value="206746117317-52ft783fisdiua9698s7123ocvqor1u4.apps.googleusercontent.com" />
+  </label>
+  <label>API base URL
+    <input id="apiBase" value="http://localhost:5136" />
+  </label>
+</fieldset>
+
+<fieldset>
+  <legend>1. Sign in with Google (gets a real ID token)</legend>
+  <div id="g_id_signin"></div>
+  <div id="tokenStatus">Not signed in.</div>
+</fieldset>
+
+<fieldset>
+  <legend>2. Call POST /api/carriers/lookup</legend>
+  <label>Origin <input id="origin" value="New York City, NY" /></label>
+  <label>Destination <input id="destination" value="Washington, DC" /></label>
+  <button onclick="setPreset('New York City, NY','Washington, DC')">NYC → DC preset</button>
+  <button onclick="setPreset('San Francisco, CA','Los Angeles, CA')">SF → LA preset</button>
+  <button onclick="setPreset('Chicago, IL','Miami, FL')">Other-pair preset (default fallback)</button>
+  <br />
+  <button onclick="callLookup(true)">Call WITH bearer token</button>
+  <button onclick="callLookup(false)">Call WITHOUT token (expect 401)</button>
+  <button onclick="callLookup(true, true)">Call WITH tampered token (expect 401)</button>
+</fieldset>
+
+<h3>Log</h3>
+<div id="log"></div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+  let idToken = null;
+
+  function log(label, ok, detail) {
+    const el = document.getElementById('log');
+    const time = new Date().toLocaleTimeString();
+    const cls = ok ? 'status-ok' : 'status-fail';
+    el.innerHTML += `<div class="${cls}">[${time}] ${label}</div>${detail ? '<div>' + detail + '</div>' : ''}\n`;
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function setPreset(o, d) {
+    document.getElementById('origin').value = o;
+    document.getElementById('destination').value = d;
+  }
+
+  function handleCredentialResponse(response) {
+    idToken = response.credential;
+    document.getElementById('tokenStatus').textContent =
+      'Signed in. ID token (truncated): ' + idToken.slice(0, 40) + '...';
+    log('Google sign-in succeeded, got a real ID token', true);
+  }
+
+  window.onload = () => {
+    google.accounts.id.initialize({
+      client_id: document.getElementById('clientId').value,
+      callback: handleCredentialResponse,
+    });
+    google.accounts.id.renderButton(document.getElementById('g_id_signin'), { theme: 'outline', size: 'large' });
+  };
+
+  async function callLookup(withToken, tamper = false) {
+    const apiBase = document.getElementById('apiBase').value;
+    const origin = document.getElementById('origin').value;
+    const destination = document.getElementById('destination').value;
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (withToken) {
+      if (!idToken) {
+        log('No ID token yet — sign in first', false);
+        return;
+      }
+      headers['Authorization'] = 'Bearer ' + (tamper ? idToken.slice(0, -5) + 'AAAAA' : idToken);
+    }
+
+    try {
+      const res = await fetch(apiBase + '/api/carriers/lookup', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ origin, destination }),
+      });
+      const bodyText = await res.text();
+      const label = `POST /api/carriers/lookup (${origin} → ${destination}) — HTTP ${res.status}`;
+      log(label, res.ok, '<pre>' + escapeHtml(bodyText) + '</pre>');
+    } catch (err) {
+      log('Request failed: ' + err.message, false);
+    }
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  }
+</script>
+</body>
+</html>

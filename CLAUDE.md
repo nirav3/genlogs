@@ -41,20 +41,22 @@ No changes have been proposed yet (`openspec/` has no `changes/` or `specs/` dir
 
 1. **system-architect** — first stop for the architecture/component/data-flow design called for in
    `requirements.md` points 2–3. Produces Mermaid diagrams via Artifact; writes no code.
-2. **backend-developer** — implements the API. Default stack is **.NET / C# (ASP.NET Core)** unless the repo
-   already shows otherwise. Security-first (validated DTOs, auth on every endpoint, parameterized queries), writes
-   xUnit/NUnit/MSTest tests for every feature, verifies with `dotnet build` / `dotnet test` before reporting done.
+2. **backend-developer** — implements the API. Stack is **.NET / ASP.NET Core (C#)** (switched from the
+   agent's Node/Express default at the user's request, since they're more comfortable in .NET — see
+   `openspec/changes/carrier-lookup-api/design.md`). Security-first (validated inputs, auth middleware on every
+   endpoint that needs it, secrets via env vars/user-secrets, rate limiting/CORS/security headers), writes xUnit +
+   `WebApplicationFactory` tests for every feature, verifies with `dotnet test` before reporting done.
 3. **frontend-developer** — implements the UI. Default stack is **plain/vanilla JavaScript** (no framework) —
    standard DOM APIs, small focused modules, Jest+jsdom tests written immediately after each feature.
 4. **qa-integration-tester** — runs only after front end + back end are both done; exercises the full stack live
    (via the Claude Browser tools), reports bugs and a performance scorecard, does not fix code.
-5. **delivery-manager** — proposes deployment (Starter/Growth/Scale tiers, AWS by default: S3+CloudFront for the
-   front end, Lambda/App Runner/ECS Fargate for the .NET API, RDS for a DB if one is introduced later), and writes
-   the actual IaC/CI-CD only once a tier is chosen.
+5. **delivery-manager** — proposes deployment (Starter/Growth/Scale tiers; Render is the default target for this
+   exercise for a single-service Node/Express + static-frontend deploy, with AWS S3+CloudFront/App Runner noted as
+   the scale-up path), and writes the actual IaC/CI-CD only once a tier is chosen.
 
 Each agent's own file is the source of truth for its conventions (security rules, test expectations, tiering
 approach, etc.) — read the relevant one before doing that kind of work rather than duplicating its rules here.
 
-Once front-end and back-end code exist, use each agent's own verification commands (`dotnet build` / `dotnet test`
-for the API, the project's `npm test` once a `package.json` is added for the UI) — there is nothing to build/lint/
-test in the repo yet.
+Once front-end and back-end code exist, use each agent's own verification commands (`dotnet test` for the API
+once its `.csproj`/solution is added, `npm test` for the UI once its `package.json` is added) — there is nothing
+to build/lint/test in the repo yet.
