@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Genlogs.Api.Models.Dtos;
 using Genlogs.Api.Tests.TestSupport;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace Genlogs.Api.Tests.Endpoints;
@@ -58,6 +59,43 @@ public class CorsPolicyTests : IClassFixture<CustomWebApplicationFactory>
         var response = await _client.SendAsync(request);
 
         Assert.False(response.Headers.Contains("Access-Control-Allow-Origin"));
+    }
+}
+
+public class ForwardedHeadersTests : IClassFixture<CustomWebApplicationFactory>
+{
+    private readonly CustomWebApplicationFactory _factory;
+
+    public ForwardedHeadersTests(CustomWebApplicationFactory factory)
+    {
+        _factory = factory;
+    }
+
+    [Fact]
+    public async Task RequestWithForwardedHttpsProto_IsNotRedirected()
+    {
+        // Simulates Render's edge: client connected over https, Render's internal hop to the
+        // container is plain http, with X-Forwarded-Proto carrying the original scheme. Without
+        // ForwardedHeaders middleware, UseHttpsRedirection() would see "http" here and issue a
+        // redirect back to https — which the client already used, producing a loop.
+        //
+        // HTTPS_PORT is set explicitly so UseHttpsRedirection() can actually resolve a redirect
+        // target in-process (TestServer has no real HTTPS endpoint to infer one from) — without
+        // this, the middleware silently no-ops on any non-https request regardless of whether
+        // ForwardedHeaders is wired up, which would make this test pass even with the bug present.
+        using var innerFactory = _factory.WithWebHostBuilder(builder => builder.UseSetting("HTTPS_PORT", "443"));
+        using var client = innerFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/health");
+        request.Headers.Add("X-Forwarded-Proto", "https");
+        request.Headers.Add("X-Forwarded-For", "203.0.113.10");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }
 

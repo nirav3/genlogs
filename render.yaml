@@ -1,0 +1,75 @@
+# Render Blueprint for Genlogs — deploys both services in this repo:
+#   1. genlogs-api       — ASP.NET Core / .NET 8 backend, built from backend/Genlogs.Api/Dockerfile
+#   2. genlogs-frontend  — plain-JS static site, served as-is from frontend/
+#
+# Usage: in the Render dashboard, New > Blueprint, point it at this repo. Render reads this file and
+# creates both services. Values marked `sync: false` are NOT stored here (never commit secrets) — set
+# them once in the Render dashboard after the Blueprint is created (exact steps in RENDER_DEPLOY.md).
+#
+# Field reference: https://render.com/docs/blueprint-spec
+
+services:
+  # ---------------------------------------------------------------------
+  # Backend: ASP.NET Core API (Docker, since Render has no native .NET runtime)
+  # ---------------------------------------------------------------------
+  - type: web
+    name: genlogs-api
+    runtime: docker
+    plan: free # Starter tier. Bump to 0.5c-512mb ($7/mo) for Growth — see RENDER_DEPLOY.md tiers.
+    region: oregon
+    rootDir: backend/Genlogs.Api
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    # Auto-deploy main only after the GitHub Actions CI check (.github/workflows/ci.yml) reports
+    # green, so a red test run can never reach production.
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      # Google OAuth Web client ID — not secret by nature (it's already public in appsettings.json),
+      # but set per-service via the dashboard for consistency with the frontend's copy of the same
+      # value and to keep render.yaml free of anything environment-specific. See RENDER_DEPLOY.md.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      # CORS allow-list (Program.cs reads this as a comma-separated list). Must exactly match the
+      # frontend static site's origin, scheme included. Update this if Render assigns your
+      # genlogs-frontend service a different onrender.com hostname than assumed here (name
+      # collision) — see RENDER_DEPLOY.md "Verify the assigned URLs".
+      - key: ALLOWED_ORIGIN
+        value: https://genlogs-frontend.onrender.com
+      # SQLite file inside the container's ephemeral filesystem — intentional, see RENDER_DEPLOY.md
+      # "SQLite persistence decision". Re-created and reseeded by DbInitializer.Seed() on every boot.
+      - key: ConnectionStrings__Default
+        value: "Data Source=genlogs.db"
+
+  # ---------------------------------------------------------------------
+  # Frontend: static site, no bundler/build step — just files as-is plus a generated config.js
+  # ---------------------------------------------------------------------
+  - type: web
+    name: genlogs-frontend
+    runtime: static
+    region: oregon
+    rootDir: frontend
+    # frontend/src/config.js is gitignored (real API keys/client IDs are local-only, never
+    # committed) — Program.js/app.js import it directly with no build step. This build command
+    # generates that file from Render env vars at deploy time so the same source ships with
+    # environment-appropriate values without ever being committed.
+    buildCommand: >-
+      printf 'export default {\n  GOOGLE_CLIENT_ID: "%s",\n  GOOGLE_MAPS_API_KEY: "%s",\n  API_BASE_URL: "%s",\n};\n'
+      "$GOOGLE_CLIENT_ID" "$GOOGLE_MAPS_API_KEY" "$API_BASE_URL" > src/config.js
+    staticPublishPath: .
+    autoDeployTrigger: checksPass
+    envVars:
+      # Same Google OAuth Web client ID as genlogs-api's GOOGLE_CLIENT_ID — must match, set manually.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      # Google Maps/Places JS API key — restrict it to this site's HTTP referrer in Google Cloud
+      # Console (see RENDER_DEPLOY.md); it is visible in the shipped JS regardless, referrer
+      # restriction is the actual control, not secrecy.
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      # Must match genlogs-api's actual URL. Update if Render assigned a different hostname
+      # (name collision) — see RENDER_DEPLOY.md "Verify the assigned URLs".
+      - key: API_BASE_URL
+        value: https://genlogs-api.onrender.com
