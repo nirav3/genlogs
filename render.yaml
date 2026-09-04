@@ -16,7 +16,10 @@ services:
     name: genlogs-api
     runtime: docker
     plan: free # Starter tier. Bump to 0.5c-512mb ($7/mo) for Growth — see RENDER_DEPLOY.md tiers.
-    region: oregon
+    # US East, closer to East Coast users for lower API latency. Doesn't affect Google Maps latency —
+    # the Maps JS API is loaded and called entirely client-side in the browser (frontend/src/app.js),
+    # never by this backend, so backend region has no bearing on it.
+    region: virginia
     rootDir: backend/Genlogs.Api
     dockerfilePath: ./Dockerfile
     dockerContext: .
@@ -49,7 +52,6 @@ services:
   - type: web
     name: genlogs-frontend
     runtime: static
-    region: oregon
     rootDir: frontend
     # frontend/src/config.js is gitignored (real API keys/client IDs are local-only, never
     # committed) — Program.js/app.js import it directly with no build step. This build command
